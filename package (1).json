@@ -1,0 +1,14 @@
+{
+  "name": "ceaxur-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord CEAXUR - maintien en ligne + statut personnalisé + connexion vocale permanente",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "@discordjs/voice": "^0.16.1",
+    "libsodium-wrappers": "^0.7.13"
+  }
+}
