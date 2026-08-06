@@ -12,6 +12,7 @@ const {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  AttachmentBuilder,
 } = require('discord.js');
 const {
   joinVoiceChannel,
@@ -25,6 +26,7 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,   // pour la voix
     GatewayIntentBits.GuildMessages,      // pour lire les commandes
     GatewayIntentBits.MessageContent,     // pour lire le contenu des commandes
+    GatewayIntentBits.GuildMembers,       // pour détecter les nouveaux membres
   ],
 });
 
@@ -45,6 +47,8 @@ const RSS_URL = process.env.RSS_URL || '';          // ex: https://ceaxur.ch/fee
 const CHECK_INTERVAL_MS = 2 * 60 * 1000;   // vérifie le site toutes les 2 minutes
 const WATCH_INTERVAL_MS = 10 * 60 * 1000;  // vérifie sitemap/RSS toutes les 10 minutes
 const PREFIX = '!';
+
+const WELCOME_CHANNEL_ID = process.env.WELCOME_CHANNEL_ID || '1496545871595311286';
 
 // Fichiers de sauvegarde locale (persistent tant que le container n'est pas rebuild)
 const DATA_DIR = path.join(__dirname, 'data');
@@ -346,6 +350,55 @@ async function postAnnouncement(type, description) {
 }
 
 // ============================================================
+// 3bis. MESSAGE DE BIENVENUE
+// ============================================================
+client.on('guildMemberAdd', async (member) => {
+  if (!WELCOME_CHANNEL_ID) return;
+  const channel = member.guild.channels.cache.get(WELCOME_CHANNEL_ID);
+  if (!channel) return console.error('❌ WELCOME_CHANNEL_ID invalide');
+
+  try {
+    const logoAttachment = new AttachmentBuilder(
+      path.join(__dirname, 'assets', 'logo.png'),
+      { name: 'logo.png' }
+    );
+    const bannerAttachment = new AttachmentBuilder(
+      path.join(__dirname, 'assets', 'banner.png'),
+      { name: 'banner.png' }
+    );
+
+    const memberCount = member.guild.memberCount;
+
+    const embed = new EmbedBuilder()
+      .setColor(0xE8B4D0) // rose pâle assorti au logo
+      .setAuthor({ name: 'CEAXUR', iconURL: 'attachment://logo.png' })
+      .setTitle(`✨ Bienvenue, ${member.user.username}`)
+      .setDescription(
+        `${member} vient de rejoindre **CEAXUR** — content(e) de t'avoir parmi nous !\n\n` +
+        `Tu es notre **membre n°${memberCount}** 🎉`
+      )
+      .setThumbnail(member.user.displayAvatarURL({ size: 256 }))
+      .setImage('attachment://banner.png')
+      .addFields(
+        { name: '🌐 Le site', value: `[ceaxur.ch](${WEBSITE_URL})`, inline: true },
+        { name: '📡 Statut du site', value: `<#${STATUS_CHANNEL_ID}>`, inline: true },
+        { name: '📢 Annonces', value: `<#${ANNOUNCE_CHANNEL_ID}>`, inline: true },
+      )
+      .setFooter({ text: 'CEAXUR • Bienvenue', iconURL: 'attachment://logo.png' })
+      .setTimestamp();
+
+    await channel.send({
+      content: `${member} 🌸`,
+      embeds: [embed],
+      files: [logoAttachment, bannerAttachment],
+      components: [buildVisitButton()],
+    });
+  } catch (err) {
+    console.error('❌ Erreur message de bienvenue :', err);
+  }
+});
+
+// ============================================================
 // 4. COMMANDES (!status, !annonce)
 // ============================================================
 client.on('messageCreate', async (message) => {
@@ -380,9 +433,6 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// ============================================================
-// 5. DÉMARRAGE
-// ============================================================
 client.once('ready', () => {
   console.log(`✅ Bot connecté en tant que ${client.user.tag}`);
 
